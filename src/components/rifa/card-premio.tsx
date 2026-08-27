@@ -32,7 +32,7 @@ export function CardPremio({
         <img
           src={premio.imagem}
           alt={premio.nome}
-          className="h-52 w-auto object-contain"
+          className={cn("w-auto object-contain", destaque ? "h-80" : "h-52")}
         />
         <Badge
           variant={destaque ? "ouro" : "suave"}

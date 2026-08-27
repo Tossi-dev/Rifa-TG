@@ -81,7 +81,7 @@ export const RIFA = {
       chamada: "Autopropelido 100% elétrico",
       descricao:
         "Zero km, 100% elétrica, motor de 1000W e bateria de alta durabilidade. Econômica no dia a dia e sustentável — sem gasolina, sem óleo, sem barulho.",
-      imagem: "/img/moto-premium.png",
+      imagem: "/img/moto-premium-vertical.png",
       imagemEscura: true, // a foto tem fundo escuro, então o card usa fundo escuro
       destaques: [
         "100% elétrica",
