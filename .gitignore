@@ -1,0 +1,22 @@
+node_modules
+.next
+out
+build
+.env
+.env.local
+.vercel
+*.log
+.DS_Store
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+.vercel
+
+# Credenciais nunca ficam na pasta do projeto — o deploy sobe a pasta inteira.
+UPSTASH_REDIS_REST_URL.txt
+UPSTASH_REDIS_REST_TOKEN.txt
+ADMIN_TOKEN.txt
+MP_ACCESS_TOKEN.txt
+MP_WEBHOOK_SECRET.txt
+*_TOKEN.txt
+*_SECRET.txt

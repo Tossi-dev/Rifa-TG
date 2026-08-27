@@ -1,0 +1,7 @@
+# O que nunca deve subir para a Vercel.
+node_modules
+.next
+_to_delete
+*_TOKEN.txt
+*_SECRET.txt
+UPSTASH_REDIS_REST_URL.txt

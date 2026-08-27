@@ -1,0 +1,354 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* =========================================================================
+   Design system da rifa — verde como cor de ação, em dois temas.
+   Tailwind v4: toda a configuração vive aqui, sem tailwind.config.js.
+
+   Os dois temas são IRMÃOS, não inversões. Cada token do claro tem um par no
+   escuro escolhido para manter o mesmo PESO ÓTICO, não o mesmo hex invertido:
+   a grade do claro contrasta 1,13:1 com o cartão e a do escuro, 1,17:1 — as
+   duas somem do mesmo jeito atrás do dado. Inverter valores daria uma grade
+   berrante no escuro e um painel que grita.
+
+   O tema escuro vale só no /admin (ver `tema.tsx`): a página de venda tem
+   identidade fixa e é a primeira impressão de quem vai comprar. Quem encara a
+   tela por meia hora é o organizador — é dele a vista a poupar.
+   ========================================================================= */
+
+:root {
+  --radius: 0.75rem;
+
+  /* Tokens base (shadcn / new-york, base zinc adaptada ao verde da marca) */
+  /* Fundo um degrau mais escuro que o #f7f9f6 anterior: com branco puro no
+     cartão, 1,06:1 de diferença não bastava para o cartão existir sem borda.
+     Agora são 1,10:1 — elevação por luminosidade, não só por contorno. */
+  --background: #f2f5f1;
+  --foreground: #101a13;
+  --card: #ffffff;
+  --card-foreground: #101a13;
+  --popover: #ffffff;
+  --popover-foreground: #101a13;
+  /* Verde de ação escurecido: 5,80:1 no branco (antes #1a8a3f dava 4,42:1,
+     abaixo do AA tanto para texto verde quanto para texto branco no botão) */
+  --primary: #157532;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5ef;
+  --secondary-foreground: #33453a;
+  --muted: #f1f5ef;
+  /* 5,67:1 sobre branco — o #6b7d71 anterior dava 4,38:1 e reprovava no AA */
+  --muted-foreground: #5a6b60;
+  --accent: #eaf6ec;
+  --accent-foreground: #116129;
+  --destructive: #c02626;
+  --destructive-foreground: #ffffff;
+  --border: #e3e9e0;
+  --input: #d2dccd;
+  --ring: #157532;
+
+  /* Tokens proprios da rifa */
+  --verde: #157532;
+  --verde-escuro: #116129;
+  --verde-claro: #eaf6ec;
+  --lima: #a7d63f;
+  --escuro: #0c130e;
+  --escuro-2: #16211a;
+  --tinta-2: #33453a;
+  --tinta-3: #5a6b60;
+
+  /* -----------------------------------------------------------------------
+     Tokens do painel do organizador (gráficos).
+
+     Separados dos tokens da marca de propósito. Cor em gráfico tem função:
+     `--serie-*` identifica CATEGORIA; `--estado-*` comunica ESTADO. Misturar
+     as duas famílias é o erro clássico — uma série pintada de vermelho vira
+     alarme sem ninguém ter dito nada.
+
+     A paleta categórica foi conferida com o validador da skill dataviz nos
+     DOIS temas: faixa de luminosidade, piso de croma, separação para
+     daltonismo (pior par 10,8 ΔE em deuteranopia no claro, 13,3 no escuro) e
+     contraste ≥3:1 contra a superfície. Não troque um valor sem revalidar.
+
+     O slot 2 é laranja, não verde: o #12a05f documentado antes como reserva
+     era byte a byte igual ao `--estado-bom` daqui de baixo, e no dia em que
+     alguém usasse `--serie-2` uma categoria nasceria pintada de "está bom".
+     ----------------------------------------------------------------------- */
+  --serie-1: #2c63d6; /* azul */
+  --serie-2: #d1651c; /* laranja */
+  --serie-3: #7a5af0; /* violeta */
+  --serie-4: #0e8fbf; /* ciano */
+
+  /* Estado tem DOIS tokens por cor. O de marca vive na faixa categórica
+     (≥3:1, o bastante para preencher forma); o de texto é escurecido até
+     passar no AA. `--estado-bom` sobre branco dá 3,38:1 — serve de barra,
+     reprova de letra, e o painel usa os dois papéis. */
+  --estado-bom: #12a05f;
+  --estado-bom-texto: #0a7a45; /* 5,41:1 */
+  --estado-atencao: #b57500;
+  --estado-atencao-texto: #8a5a00; /* 5,93:1 */
+  --estado-ruim: #c02626;
+  --estado-ruim-texto: #a81f1f; /* 7,29:1 */
+  --estado-neutro: #97a49b;
+
+  /* Cromo do gráfico: recessivo, nunca competindo com o dado. */
+  --grafico-grade: #eef2ec; /* 1,13:1 — hairline que some atrás do dado */
+  --grafico-base: #dbe2d8; /* linha do zero: âncora do comprimento da barra */
+  --grafico-eixo: #5a6b60; /* rótulo de eixo é texto: 5,67:1 */
+  --grafico-guia: #cbd6c8; /* guia vertical do ponto sob o cursor */
+  --grafico-trilho: #edf1ec; /* trilho da barra horizontal e da rosca */
+  --grafico-realce: #ffffff; /* topo do degradê da barra */
+  --grafico-esmaecido: 0.42; /* barras que não estão sob o cursor */
+
+  /* Degradê da área: a opacidade é TOKEN, não número solto no componente —
+     é o que deixa o escuro receber mais tinta para o mesmo peso ótico. */
+  --grafico-area-topo: 0.22;
+  --grafico-area-meio: 0.1;
+  --grafico-area-base: 0.02;
+}
+
+.dark {
+  /* Nada de preto puro: #0e1310 tem o mesmo viés verde da marca e evita o
+     halo que texto claro produz sobre #000. E o cartão é MAIS CLARO que o
+     fundo — no escuro, elevação se lê por luminosidade, não por sombra. */
+  --background: #0e1310;
+  --foreground: #e9efe9; /* não é #fff: branco puro sangra sobre fundo escuro */
+  --card: #1a211c;
+  --card-foreground: #e9efe9;
+  --popover: #212a24;
+  --popover-foreground: #e9efe9;
+  /* O verde de ação do claro (#157532) fica quase invisível aqui. Este par é
+     mais claro e menos saturado — a mesma marca, na luz certa. */
+  --primary: #35b06a;
+  --primary-foreground: #08130c;
+  --secondary: #232c26;
+  --secondary-foreground: #cbd8ce;
+  --muted: #232c26;
+  --muted-foreground: #a6b6ac; /* 7,75:1 */
+  --accent: #17291d;
+  --accent-foreground: #7fd6a0;
+  --destructive: #ef6b66;
+  --destructive-foreground: #0e1310;
+  --border: #2b352e;
+  --input: #3d493f;
+  --ring: #35b06a;
+
+  --verde: #35b06a;
+  --verde-escuro: #2a8f56;
+  --verde-claro: #17291d;
+  --lima: #b6e04f;
+  --escuro: #0a0f0c;
+  --escuro-2: #131a15;
+  --tinta-2: #cbd8ce;
+  --tinta-3: #a6b6ac;
+
+  --serie-1: #4d8ae9;
+  --serie-2: #d5722c;
+  --serie-3: #7d63e2;
+  --serie-4: #22a4c6;
+
+  --estado-bom: #35c184;
+  --estado-bom-texto: #3fd08f; /* 8,32:1 */
+  --estado-atencao: #d99a1b;
+  --estado-atencao-texto: #e0a52a; /* 7,50:1 */
+  --estado-ruim: #ef6b66;
+  --estado-ruim-texto: #ef6b66; /* 5,45:1 */
+  --estado-neutro: #7a8a80;
+
+  --grafico-grade: #252e28; /* 1,17:1 — mesmo peso ótico da grade clara */
+  --grafico-base: #39443c;
+  --grafico-eixo: #a6b6ac; /* 7,75:1 */
+  --grafico-guia: #455049;
+  --grafico-trilho: #242d27;
+  --grafico-realce: #ffffff;
+  --grafico-esmaecido: 0.38;
+
+  --grafico-area-topo: 0.3;
+  --grafico-area-meio: 0.13;
+  --grafico-area-base: 0.03;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-verde: var(--verde);
+  --color-verde-escuro: var(--verde-escuro);
+  --color-verde-claro: var(--verde-claro);
+  --color-lima: var(--lima);
+  --color-escuro: var(--escuro);
+  --color-escuro-2: var(--escuro-2);
+  --color-tinta-2: var(--tinta-2);
+  --color-tinta-3: var(--tinta-3);
+
+  /* Expostos ao Tailwind para a faixa de simulação, os cartões e afins. */
+  --color-serie-1: var(--serie-1);
+  --color-serie-2: var(--serie-2);
+  --color-serie-3: var(--serie-3);
+  --color-serie-4: var(--serie-4);
+  --color-estado-bom: var(--estado-bom);
+  --color-estado-atencao: var(--estado-atencao);
+  --color-estado-ruim: var(--estado-ruim);
+  --color-estado-bom-texto: var(--estado-bom-texto);
+  --color-estado-atencao-texto: var(--estado-atencao-texto);
+  --color-estado-ruim-texto: var(--estado-ruim-texto);
+  --color-grafico-grade: var(--grafico-grade);
+  --color-grafico-eixo: var(--grafico-eixo);
+  --color-grafico-trilho: var(--grafico-trilho);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    overflow-x: hidden;
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+      Arial, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.025em;
+  }
+}
+
+/* Anima o ponto pulsante do selo "sorteio em ..." */
+@keyframes pulsar-selo {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+}
+
+.animacao-pulso {
+  animation: pulsar-selo 1.8s ease-in-out infinite;
+}
+
+/* -------------------------------------------------------------------------
+   Entrada dos gráficos.
+
+   Orçamento: o gráfico está legível em 420 ms. Nada encadeado, nada em
+   cascata longa, nenhum atraso antes do primeiro pixel de dado. A animação
+   roda UMA vez, na montagem — atualizar não repete, porque quem atualiza está
+   comparando, e esperar meio segundo a cada clique é o oposto de rápido.
+
+   `pathLength={1}` no <path> renormaliza a unidade do tracejado, e é o que
+   deixa `stroke-dasharray: 1` desenhar o traço inteiro sem precisar medi-lo.
+   ------------------------------------------------------------------------- */
+@keyframes g-traco {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+@keyframes g-surge {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes g-cresce-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes g-cresce-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.g-traco {
+  stroke-dasharray: 1;
+  animation: g-traco 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.g-surge {
+  animation: g-surge 260ms cubic-bezier(0.4, 0, 0.2, 1) 140ms both;
+}
+/* A barra cresce a partir da linha do zero, nunca do centro: o eixo ancorado
+   no zero tem que valer também durante a animação. */
+.g-cresce-y {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: g-cresce-y 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.g-cresce-x {
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: g-cresce-x 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+.g-rotulo {
+  animation: g-surge 200ms linear 300ms both;
+}
+
+/* O estado NATURAL de cada elemento é o estado final. Por isso desligar a
+   animação basta: não sobra nenhum `opacity: 0` nem dashoffset inline para
+   limpar, e ninguém fica com um gráfico invisível. */
+@media (prefers-reduced-motion: reduce) {
+  .g-traco,
+  .g-surge,
+  .g-cresce-y,
+  .g-cresce-x,
+  .g-rotulo,
+  .animacao-pulso {
+    animation: none !important;
+  }
+  .g-traco {
+    stroke-dasharray: none;
+  }
+}
+
+/* Esconde o spinner nativo do input numerico da quantidade de cotas */
+.sem-spinner::-webkit-outer-spin-button,
+.sem-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.sem-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+@media print {
+  .nao-imprimir {
+    display: none !important;
+  }
+}
