@@ -82,6 +82,7 @@ export const RIFA = {
       descricao:
         "Zero km, 100% elétrica, motor de 1000W e bateria de alta durabilidade. Econômica no dia a dia e sustentável — sem gasolina, sem óleo, sem barulho.",
       imagem: "/img/moto-premium-vertical.png",
+      imagemCard: "/img/moto-premium.png",
       imagemEscura: true, // a foto tem fundo escuro, então o card usa fundo escuro
       destaques: [
         "100% elétrica",
@@ -98,6 +99,7 @@ export const RIFA = {
       descricao:
         "Uma diária completa no Espaço Famma Eventos, com piscina e área de lazer para curtir com quem você gosta.",
       imagem: "/img/famma.webp",
+      imagemCard: "/img/famma.webp",
       imagemEscura: false,
       destaques: ["Diária completa", "Piscina e área de lazer", "Espaço para eventos"],
       parceiro: { nome: "Famma Eventos", instagram: "" },
@@ -109,6 +111,7 @@ export const RIFA = {
       descricao:
         "R$ 100,00 em voucher para gastar como quiser na The Best Açaí de Itararé.",
       imagem: "/img/acai.webp",
+      imagemCard: "/img/acai.webp",
       imagemEscura: true,
       destaques: ["R$ 100,00 em crédito", "The Best Açaí Itararé"],
       parceiro: { nome: "The Best Açaí", instagram: "f.thebestitarare" },

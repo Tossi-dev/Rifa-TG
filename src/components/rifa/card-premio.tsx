@@ -30,9 +30,9 @@ export function CardPremio({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={premio.imagem}
+          src={premio.imagemCard}
           alt={premio.nome}
-          className={cn("w-auto object-contain", destaque ? "h-80" : "h-52")}
+          className="h-52 w-auto object-contain"
         />
         <Badge
           variant={destaque ? "ouro" : "suave"}
