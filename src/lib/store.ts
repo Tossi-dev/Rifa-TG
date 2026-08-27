@@ -29,7 +29,7 @@ import { RIFA } from "./config";
  * cota sobrando. Vai para a fila de conciliação do organizador.
  */
 export type StatusPedido = "pendente" | "pago" | "expirado" | "reembolsar";
-export type Provedor = "mercadopago" | "demonstracao";
+export type Provedor = "mercadopago" | "demonstracao" | "manual";
 
 export interface Pedido {
   id: string;
@@ -169,6 +169,57 @@ if redis.call('GET', KEYS[1]) == ARGV[1] then
   return redis.call('DEL', KEYS[1])
 end
 return 0
+`.trim();
+
+/**
+ * Registra uma venda que aconteceu fora do checkout, com os números que o
+ * organizador informa. Tudo acontece no mesmo script: conferir dono, ocupar
+ * os números, avançar o cursor e gravar o pedido. Separar essas etapas em
+ * chamadas HTTP deixaria duas pessoas do painel conseguirem registrar o mesmo
+ * número no intervalo entre a leitura e a escrita.
+ */
+const SCRIPT_REGISTRAR_VENDA_MANUAL = `
+local total = tonumber(ARGV[1])
+local id = ARGV[2]
+local pedido = ARGV[3]
+local cursor = tonumber(redis.call('GET', KEYS[1]) or '0')
+
+if redis.call('EXISTS', KEYS[4]) == 1 then return {0, 'pedido', id} end
+
+for i = 4, #ARGV do
+  local numero = tonumber(ARGV[i])
+  if not numero or numero < 1 or numero > total then
+    return {0, 'invalido', ARGV[i]}
+  end
+  if redis.call('HGET', KEYS[3], ARGV[i]) then
+    return {0, 'ocupado', ARGV[i]}
+  end
+end
+
+for i = 4, #ARGV do
+  local numero = tonumber(ARGV[i])
+  if numero <= cursor then
+    if redis.call('LREM', KEYS[2], 1, ARGV[i]) ~= 1 then
+      return {0, 'indisponivel', ARGV[i]}
+    end
+  else
+    for livre = cursor + 1, numero - 1 do
+      redis.call('RPUSH', KEYS[2], tostring(livre))
+    end
+    cursor = numero
+    redis.call('SET', KEYS[1], tostring(cursor))
+  end
+end
+
+local pares = {}
+for i = 4, #ARGV do
+  table.insert(pares, ARGV[i])
+  table.insert(pares, id)
+end
+redis.call('HSET', KEYS[3], unpack(pares))
+redis.call('SET', KEYS[4], pedido)
+redis.call('RPUSH', KEYS[5], id)
+return {1}
 `.trim();
 
 /* --------------------------------------------------- Memória (fallback) -- */
@@ -446,6 +497,91 @@ export async function atribuirNumeros(qtd: number): Promise<number[]> {
     }
     throw e;
   }
+}
+
+/** Número que já pertence a uma venda ou não está mais livre para registro. */
+export class NumeroIndisponivel extends Error {
+  constructor(public numero: number) {
+    super(`O número ${numero} já está vendido ou não está disponível.`);
+  }
+}
+
+/**
+ * Registra uma venda paga fora do checkout usando os números exatos vendidos.
+ *
+ * Este é o caminho de migração para vendas que já aconteceram no papel, no
+ * WhatsApp ou por Pix direto. O pedido entra como pago, alimenta o placar do
+ * vendedor e ocupa os mesmos índices usados pelo sorteio e pelo checkout.
+ */
+export async function registrarVendaManual(pedido: Pedido): Promise<void> {
+  const numeros = [...pedido.numeros].sort((a, b) => a - b);
+  if (
+    pedido.status !== "pago" ||
+    pedido.provedor !== "manual" ||
+    pedido.cotas !== numeros.length ||
+    numeros.length === 0 ||
+    numeros.some(
+      (n, i) =>
+        !Number.isInteger(n) ||
+        n < 1 ||
+        n > RIFA.totalCotas ||
+        (i > 0 && numeros[i - 1] === n)
+    )
+  ) {
+    throw new Error("Venda manual inválida.");
+  }
+
+  const manual: Pedido = { ...pedido, numeros };
+
+  if (!usandoRedis) {
+    if (mem.pedidos.has(manual.id)) throw new Error("Venda manual duplicada.");
+
+    for (const numero of numeros) {
+      if (mem.numeros.has(String(numero))) throw new NumeroIndisponivel(numero);
+      if (numero <= mem.cursor && !mem.livres.includes(numero)) {
+        throw new NumeroIndisponivel(numero);
+      }
+    }
+
+    for (const numero of numeros) {
+      if (numero <= mem.cursor) {
+        mem.livres.splice(mem.livres.indexOf(numero), 1);
+      } else {
+        for (let livre = mem.cursor + 1; livre < numero; livre++) {
+          mem.livres.push(livre);
+        }
+        mem.cursor = numero;
+      }
+      mem.numeros.set(String(numero), manual.id);
+    }
+    mem.livres.sort((a, b) => a - b);
+    mem.pedidos.set(manual.id, manual);
+    mem.todos.push(manual.id);
+    limparCacheResumo();
+    return;
+  }
+
+  const resultado = await redis<Array<string | number>>(
+    "EVAL",
+    SCRIPT_REGISTRAR_VENDA_MANUAL,
+    5,
+    K.cursor,
+    K.livres,
+    K.numeros,
+    K.pedido(manual.id),
+    K.todos,
+    RIFA.totalCotas,
+    manual.id,
+    JSON.stringify(manual),
+    ...numeros
+  );
+
+  if (Number(resultado[0]) !== 1) {
+    const numero = Number(resultado[2]);
+    if (Number.isInteger(numero)) throw new NumeroIndisponivel(numero);
+    throw new Error("Não foi possível registrar a venda manual.");
+  }
+  limparCacheResumo();
 }
 
 /** Estorno: devolve números para a rifa (só em falha depois de atribuir). */

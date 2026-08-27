@@ -138,6 +138,57 @@ function executar(banco: Map<string, Valor>, args: string[]): unknown {
         return novo;
       }
 
+      if (script.includes("local pedido = ARGV[3]")) {
+        const [cursorKey, livresKey, numerosKey, pedidoKey, todosKey] = args.slice(
+          3,
+          3 + chaves
+        );
+        const total = Number(argv[0]);
+        const id = argv[1];
+        const pedido = argv[2];
+        const numeros = argv.slice(3).map(Number);
+        const cursorAtual = banco.get(cursorKey);
+        let cursor = cursorAtual?.tipo === "texto" ? Number(cursorAtual.texto) : 0;
+
+        if (banco.has(pedidoKey)) return [0, "pedido", id];
+
+        const indiceAtual = banco.get(numerosKey);
+        const indice =
+          indiceAtual?.tipo === "hash" ? indiceAtual.campos : new Map<string, string>();
+        const livresAtual = banco.get(livresKey);
+        const livres = livresAtual?.tipo === "lista" ? livresAtual.itens : [];
+
+        for (const numero of numeros) {
+          if (!Number.isInteger(numero) || numero < 1 || numero > total) {
+            return [0, "invalido", String(numero)];
+          }
+          if (indice.has(String(numero))) return [0, "ocupado", String(numero)];
+          if (numero <= cursor && !livres.includes(String(numero))) {
+            return [0, "indisponivel", String(numero)];
+          }
+        }
+
+        for (const numero of numeros) {
+          if (numero <= cursor) {
+            livres.splice(livres.indexOf(String(numero)), 1);
+          } else {
+            for (let livre = cursor + 1; livre < numero; livre++) livres.push(String(livre));
+            cursor = numero;
+          }
+          indice.set(String(numero), id);
+        }
+
+        banco.set(cursorKey, { tipo: "texto", texto: String(cursor) });
+        if (livres.length) banco.set(livresKey, { tipo: "lista", itens: livres });
+        if (!indiceAtual) banco.set(numerosKey, { tipo: "hash", campos: indice });
+        banco.set(pedidoKey, { tipo: "texto", texto: pedido });
+        const todosAtual = banco.get(todosKey);
+        const todos = todosAtual?.tipo === "lista" ? todosAtual.itens : [];
+        todos.push(id);
+        if (!todosAtual) banco.set(todosKey, { tipo: "lista", itens: todos });
+        return [1];
+      }
+
       if (script.includes("redis.call('DEL', KEYS[1])")) {
         const valor = banco.get(chaveScript);
         const dono = valor?.tipo === "texto" ? valor.texto : null;

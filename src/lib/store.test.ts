@@ -150,6 +150,63 @@ describe("atribuição de números", () => {
   });
 });
 
+describe("registro manual de vendas", () => {
+  function vendaManual(id: string, numeros: number[]): Store.Pedido {
+    const agora = Date.now();
+    return {
+      id,
+      nome: "Comprador Manual",
+      whatsapp: "15999998888",
+      cpf: "",
+      cotas: numeros.length,
+      valor: numeros.length * 15,
+      numeros,
+      status: "pago",
+      criadoEm: agora,
+      expiraEm: agora,
+      pagoEm: agora,
+      provedor: "manual",
+      idPagamento: null,
+      codigoPix: null,
+      imagemQrCode: null,
+      vendedor: "ana",
+    };
+  }
+
+  it("ocupa os números informados e soma a venda ao total", async () => {
+    const { store } = await montarRifa(100);
+
+    await store.registrarVendaManual(vendaManual("MAN1", [3, 5, 7]));
+
+    expect((await store.buscarPedido("MAN1"))?.status).toBe("pago");
+    expect((await store.pedidoDoNumero(5))?.id).toBe("MAN1");
+    expect(await store.cotasVendidas()).toBe(3);
+    expect((await store.resumo()).disponiveis).toBe(97);
+  });
+
+  it("não deixa uma venda manual reutilizar número já vendido", async () => {
+    const { store } = await montarRifa(100);
+    await store.registrarVendaManual(vendaManual("MAN1", [8]));
+
+    await expect(store.registrarVendaManual(vendaManual("MAN2", [8]))).rejects.toMatchObject({
+      numero: 8,
+    });
+    expect((await store.buscarPedido("MAN2"))).toBeNull();
+  });
+
+  it("faz o checkout pular os números registrados manualmente", async () => {
+    const { store } = await montarRifa(100);
+    await store.registrarVendaManual(vendaManual("MAN1", [3, 5]));
+
+    const pedido = await cobrar(store, "ONLINE", 5);
+    const confirmado = await store.confirmarPagamento(pedido);
+
+    expect(confirmado.pedido.numeros).toEqual([1, 2, 4, 6, 7]);
+    expect(new Set(confirmado.pedido.numeros)).not.toContain(3);
+    expect(new Set(confirmado.pedido.numeros)).not.toContain(5);
+  });
+});
+
 describe("confirmação idempotente", () => {
   it("duas confirmações simultâneas do mesmo pedido atribuem uma vez só", async () => {
     const { store } = await montarRifa(100);

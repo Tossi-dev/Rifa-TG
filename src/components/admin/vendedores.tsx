@@ -54,8 +54,16 @@ export function SecaoVendedores({
   const [emLote, setEmLote] = useState<boolean>(false);
   const [aviso, setAviso] = useState<string>("");
   const [salvando, setSalvando] = useState<boolean>(false);
+  const [registrandoVenda, setRegistrandoVenda] = useState<boolean>(false);
   const [erro, setErro] = useState<string>("");
   const [copiado, setCopiado] = useState<string>("");
+  const [venda, setVenda] = useState({
+    vendedor: "",
+    nome: "",
+    whatsapp: "",
+    cpf: "",
+    numeros: "",
+  });
 
   const carregar = useCallback(async (): Promise<void> => {
     try {
@@ -143,6 +151,39 @@ export function SecaoVendedores({
       aoMudarCadastro();
     } catch {
       setErro("Falha de conexão.");
+    }
+  }
+
+  async function registrarVenda(evento: React.FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setRegistrandoVenda(true);
+    setErro("");
+    setAviso("");
+    try {
+      const resposta = await fetch("/api/admin/vendas-manuais", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(venda),
+      });
+      const corpo = (await resposta.json()) as { erro?: string; numeros?: number[] };
+      if (!resposta.ok) {
+        setErro(corpo.erro ?? "Não foi possível registrar a venda.");
+        return;
+      }
+      setVenda({ vendedor: "", nome: "", whatsapp: "", cpf: "", numeros: "" });
+      setAviso(
+        `Venda registrada: número${corpo.numeros?.length === 1 ? "" : "s"} ${
+          corpo.numeros?.join(", ") ?? ""
+        }.`
+      );
+      aoMudarCadastro();
+    } catch {
+      setErro("Falha de conexão.");
+    } finally {
+      setRegistrandoVenda(false);
     }
   }
 
@@ -349,6 +390,74 @@ export function SecaoVendedores({
               })}
             </ul>
           )}
+
+          <div className="space-y-3 rounded-xl border border-border bg-secondary/30 p-4">
+            <div>
+              <h3 className="text-base font-bold">Registrar venda já paga</h3>
+              <p className="text-sm text-muted-foreground">
+                Para vendas feitas fora do site. Os números informados ficam
+                bloqueados, aparecem no sorteio e entram no placar do vendedor.
+              </p>
+            </div>
+
+            <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => void registrarVenda(e)}>
+              <label className="grid gap-1.5 text-sm font-medium sm:col-span-2">
+                Vendedor
+                <select
+                  value={venda.vendedor}
+                  onChange={(e) => setVenda({ ...venda, vendedor: e.target.value })}
+                  required
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  <option value="">Selecione quem fez a venda</option>
+                  {cadastro.map((v) => (
+                    <option key={v.codigo} value={v.codigo}>
+                      {v.nome}{v.ativo ? "" : " (inativo)"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <Input
+                value={venda.nome}
+                onChange={(e) => setVenda({ ...venda, nome: e.target.value })}
+                placeholder="Nome completo do comprador"
+                aria-label="Nome completo do comprador"
+                required
+              />
+              <Input
+                value={venda.whatsapp}
+                onChange={(e) => setVenda({ ...venda, whatsapp: e.target.value })}
+                placeholder="WhatsApp com DDD"
+                aria-label="WhatsApp do comprador"
+                inputMode="tel"
+                required
+              />
+              <Input
+                value={venda.cpf}
+                onChange={(e) => setVenda({ ...venda, cpf: e.target.value })}
+                placeholder="CPF (opcional)"
+                aria-label="CPF do comprador, opcional"
+                inputMode="numeric"
+              />
+              <Input
+                value={venda.numeros}
+                onChange={(e) => setVenda({ ...venda, numeros: e.target.value })}
+                placeholder="Números: 12, 20-23, 45"
+                aria-label="Números vendidos"
+                required
+              />
+              <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
+                <Button type="submit" disabled={registrandoVenda || cadastro.length === 0}>
+                  <Plus /> {registrandoVenda ? "Registrando..." : "Registrar venda paga"}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Use vírgula ou intervalo: <strong>12, 20-23, 45</strong>. O sistema
+                  impede número repetido.
+                </p>
+              </div>
+            </form>
+          </div>
 
           <p className="text-xs text-muted-foreground">
             <strong className="text-foreground">Mandar</strong> abre o WhatsApp
