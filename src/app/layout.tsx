@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     description: descricao,
     type: "website",
     locale: "pt_BR",
-    images: ["/img/moto.webp"],
+    images: ["/img/moto-premium.png"],
   },
   robots: { index: true, follow: true },
 };
